@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard 2027</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="menu.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<style>
+:root { --bg:#f5f5f4; --surface:#fff; --surface-2:#f0f0ef; --border:#e6e6e4; --text:#15161a; --muted:#72747a;
+  --verde:#0f7a55; --vermelho:#b42318; --ink:#15161a; --ink-text:#fff; color-scheme:light; }
+:root[data-theme="dark"] { --bg:#0e0f11; --surface:#17181b; --surface-2:#202126; --border:#2a2b30; --text:#f2f2f3; --muted:#8e9097;
+  --verde:#3fbf8c; --vermelho:#f08a80; --ink:#f2f2f3; --ink-text:#111; color-scheme:dark; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --bg:#0e0f11; --surface:#17181b; --surface-2:#202126; --border:#2a2b30; --text:#f2f2f3; --muted:#8e9097;
+  --verde:#3fbf8c; --vermelho:#f08a80; --ink:#f2f2f3; --ink-text:#111; color-scheme:dark; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 32px); -webkit-font-smoothing:antialiased; }
+.wrap { max-width:960px; margin:0 auto; }
+.hidden { display:none !important; }
+header { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+header h1 { font-size:1.35rem; font-weight:700; margin:0; flex:1; letter-spacing:-.01em; }
+.meta { color:var(--muted); font-size:.85rem; }
+.round { width:40px; height:40px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; display:grid; place-items:center; font-size:1rem; padding:0; text-decoration:none; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:14px; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; }
+.kpi small { display:block; color:var(--muted); font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; }
+.kpi strong { font-size:1.3rem; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+.kpi .sub { color:var(--muted); font-size:.8rem; margin-top:4px; }
+.verde { color:var(--verde); } .vermelho { color:var(--vermelho); }
+.grade { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.grade .largo { grid-column:1 / -1; }
+.card h2 { font-size:.95rem; font-weight:600; margin:0 0 2px; }
+.card .dica { color:var(--muted); font-size:.8rem; margin:0 0 12px; }
+.canvas-box { position:relative; height:260px; }
+.secao { color:var(--muted); font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; margin:22px 0 10px; }
+@media (max-width:720px) { .grade { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div id="telaLogin" class="wrap hidden" style="text-align:center;padding-top:40px">
+  <p class="meta">Você precisa entrar primeiro.</p>
+  <a href="index.html" style="color:var(--text)">Ir para o login</a>
+</div>
+
+<div id="telaApp" class="wrap hidden">
+  <header>
+    <a class="round" href="meu-financeiro.html" title="Voltar">‹</a>
+    <div style="flex:1">
+      <h1>Dashboard 2027</h1>
+      <div class="meta">Visão do ano · janeiro a dezembro</div>
+    </div>
+    <button class="round" id="tema" title="Alternar tema">◐</button>
+  </header>
+
+  <div class="secao" style="margin-top:0">Meu financeiro</div>
+  <div class="kpis">
+    <div class="card kpi"><small>Entradas</small><strong class="verde" id="kEnt">R$ 0,00</strong></div>
+    <div class="card kpi"><small>Saídas</small><strong class="vermelho" id="kSai">R$ 0,00</strong></div>
+    <div class="card kpi"><small>Investido</small><strong id="kInv">R$ 0,00</strong></div>
+    <div class="card kpi"><small>Saldo do ano</small><strong id="kSaldo">R$ 0,00</strong><div class="sub" id="kTaxa"></div></div>
+  </div>
+
+  <div class="grade">
+    <div class="card largo">
+      <h2>Entradas e saídas por mês</h2>
+      <p class="dica">Comparação mensal do ano</p>
+      <div class="canvas-box"><canvas id="gMensal"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Patrimônio investido</h2>
+      <p class="dica">Acumulado ao longo do ano</p>
+      <div class="canvas-box"><canvas id="gInv"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Maiores saídas por categoria</h2>
+      <p class="dica">Top 8 do ano</p>
+      <div class="canvas-box"><canvas id="gCat"></canvas></div>
+    </div>
+  </div>
+
+  <div class="secao">Despesas do casal (Morada Mavi)</div>
+  <div class="kpis">
+    <div class="card kpi"><small>Total do casal no ano</small><strong id="cTotal">R$ 0,00</strong></div>
+    <div class="card kpi"><small>Cada um paga no ano</small><strong id="cMetade">R$ 0,00</strong></div>
+  </div>
+  <div class="card">
+    <h2>Despesas compartilhadas por mês</h2>
+    <p class="dica">Total do casal em cada mês</p>
+    <div class="canvas-box"><canvas id="gComp"></canvas></div>
+  </div>
+</div>
+
+<script>
+
+const ANO = 2027;
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const fmt = v => Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+const idxMes = d => Number(d.slice(5, 7)) - 1;
+
+let charts = [];
+
+// ---- tema ----
+const salvo = localStorage.getItem('tema');
+if (salvo) document.documentElement.setAttribute('data-theme', salvo);
+function ehEscuro() {
+  const t = document.documentElement.getAttribute('data-theme');
+  return t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+}
+document.getElementById('tema').onclick = () => {
+  const novo = ehEscuro() ? 'light' : 'dark';
+  localStorage.setItem('tema', novo);
+  document.documentElement.setAttribute('data-theme', novo);
+  if (dados) desenhar(dados);
+};
+
+// ---- dados ----
+let dados = null;
+
+async function carregar() {
+  const ini = `${ANO}-01-01`, fim = `${ANO}-12-31`;
+  const [c, t, lm] = await Promise.all([
+    sb.from('categorias').select('*'),
+    sb.from('transacoes').select('*').gte('data', ini).lte('data', fim),
+    sb.from('lancamentos_mensais').select('*').gte('mes', ini).lte('mes', fim)
+  ]);
+  for (const r of [c, t, lm]) if (r.error) throw r.error;
+  return { cats: c.data, trans: t.data, lancs: lm.data };
+}
+
+function calcular({ cats, trans, lancs }) {
+  const ent = Array(12).fill(0), sai = Array(12).fill(0), inv = Array(12).fill(0), comp = Array(12).fill(0);
+  const porCat = {};
+  trans.forEach(x => {
+    const i = idxMes(x.data), v = Number(x.valor);
+    if (x.tipo === 'entrada') ent[i] += v;
+    else if (x.tipo === 'saida') {
+      sai[i] += v;
+      const nome = (cats.find(c => c.id === x.categoria_id) || {}).nome || 'Sem categoria';
+      porCat[nome] = (porCat[nome] || 0) + v;
+    } else inv[i] += v;
+  });
+  lancs.forEach(x => comp[idxMes(x.mes)] += Number(x.valor));
+
+  const totEnt = ent.reduce((a, b) => a + b, 0);
+  const totSai = sai.reduce((a, b) => a + b, 0);
+  const totInv = inv.reduce((a, b) => a + b, 0);
+  const totComp = comp.reduce((a, b) => a + b, 0);
+  const acumInv = inv.map((_, i) => inv.slice(0, i + 1).reduce((a, b) => a + b, 0));
+  const topCats = Object.entries(porCat).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  return { ent, sai, inv, comp, totEnt, totSai, totInv, totComp, acumInv, topCats };
+}
+
+// ---- desenho ----
+function desenhar(d) {
+  const r = calcular(d);
+  const escuro = ehEscuro();
+  const texto = escuro ? '#8e9097' : '#72747a';
+  const grade = escuro ? '#2a2b30' : '#e6e6e4';
+  const preto = escuro ? '#f2f2f3' : '#15161a';
+  const cinza = escuro ? '#5a5c63' : '#b9bbc1';
+  Chart.defaults.color = texto;
+  Chart.defaults.font.family = '-apple-system, Segoe UI, Inter, Roboto, sans-serif';
+
+  // KPIs
+  document.getElementById('kEnt').textContent = fmt(r.totEnt);
+  document.getElementById('kSai').textContent = fmt(r.totSai);
+  document.getElementById('kInv').textContent = fmt(r.totInv);
+  const saldo = r.totEnt - r.totSai - r.totInv;
+  const ks = document.getElementById('kSaldo');
+  ks.textContent = fmt(saldo);
+  ks.className = saldo < 0 ? 'vermelho' : '';
+  const taxa = r.totEnt > 0 ? (r.totInv / r.totEnt) * 100 : 0;
+  document.getElementById('kTaxa').textContent = `${taxa.toFixed(1)}% das entradas foram investidos`;
+
+  document.getElementById('cTotal').textContent = fmt(r.totComp);
+  document.getElementById('cMetade').textContent = fmt(r.totComp / 2);
+
+  // limpar gráficos antigos
+  charts.forEach(c => c.destroy());
+  charts = [];
+
+  const eixoBRL = { grid:{ color:grade }, ticks:{ callback:v => 'R$ ' + Number(v).toLocaleString('pt-BR') } };
+  const tooltipBRL = { callbacks:{ label: c => ` ${c.dataset.label}: ${fmt(c.raw)}` } };
+  const legenda = { position:'bottom', labels:{ boxWidth:10, boxHeight:10, usePointStyle:true } };
+
+  charts.push(new Chart(document.getElementById('gMensal'), {
+    type:'bar',
+    data:{ labels:MESES, datasets:[
+      { label:'Entradas', data:r.ent, backgroundColor:preto, borderRadius:6 },
+      { label:'Saídas', data:r.sai, backgroundColor:cinza, borderRadius:6 }
+    ]},
+    options:{ maintainAspectRatio:false, plugins:{ legend:legenda, tooltip:tooltipBRL }, scales:{ x:{ grid:{ display:false } }, y:eixoBRL } }
+  }));
+
+  charts.push(new Chart(document.getElementById('gInv'), {
+    type:'line',
+    data:{ labels:MESES, datasets:[
+      { label:'Investido acumulado', data:r.acumInv, borderColor:preto, backgroundColor:escuro ? 'rgba(242,242,243,.08)' : 'rgba(21,22,26,.06)', fill:true, tension:.35, pointRadius:3, pointBackgroundColor:preto }
+    ]},
+    options:{ maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:tooltipBRL }, scales:{ x:{ grid:{ display:false } }, y:eixoBRL } }
+  }));
+
+  charts.push(new Chart(document.getElementById('gCat'), {
+    type:'bar',
+    data:{ labels:r.topCats.map(c => c[0]), datasets:[
+      { label:'Saídas', data:r.topCats.map(c => c[1]), backgroundColor:preto, borderRadius:6 }
+    ]},
+    options:{ indexAxis:'y', maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:tooltipBRL }, scales:{ x:eixoBRL, y:{ grid:{ display:false } } } }
+  }));
+
+  charts.push(new Chart(document.getElementById('gComp'), {
+    type:'bar',
+    data:{ labels:MESES, datasets:[
+      { label:'Total do casal', data:r.comp, backgroundColor:preto, borderRadius:6 }
+    ]},
+    options:{ maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:tooltipBRL }, scales:{ x:{ grid:{ display:false } }, y:eixoBRL } }
+  }));
+}
+
+async function iniciar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { document.getElementById('telaLogin').classList.remove('hidden'); return; }
+  document.getElementById('telaApp').classList.remove('hidden');
+  try {
+    dados = await carregar();
+    desenhar(dados);
+  } catch (e) {
+    alert('Erro ao carregar: ' + e.message);
+  }
+}
+
+iniciar();
+</script>
+</body>
+</html>

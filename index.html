@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Despesas Morada Mavi</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="menu.js"></script>
+<style>
+:root {
+  --bg:#f1f1f1; --surface:#ffffff; --surface-2:#f6f6f6; --border:#e4e4e4;
+  --text:#121212; --muted:#6e6e6e; --ink:#151515; --ink-text:#ffffff;
+  --ring:rgba(0,0,0,.12); --radius:16px;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg:#0d0d0d; --surface:#171717; --surface-2:#1f1f1f; --border:#2a2a2a;
+  --text:#f3f3f3; --muted:#8c8c8c; --ink:#f3f3f3; --ink-text:#111111;
+  --ring:rgba(255,255,255,.14); color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    --bg:#0d0d0d; --surface:#171717; --surface-2:#1f1f1f; --border:#2a2a2a;
+    --text:#f3f3f3; --muted:#8c8c8c; --ink:#f3f3f3; --ink-text:#111111;
+    --ring:rgba(255,255,255,.14); color-scheme: dark;
+  }
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding: calc(env(safe-area-inset-top,0px) + 20px) 16px calc(env(safe-area-inset-bottom,0px) + 32px);
+}
+.wrap { max-width:680px; margin:0 auto; }
+.hidden { display:none !important; }
+header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:24px; }
+h1 { font-size:1.35rem; font-weight:700; letter-spacing:-.01em; margin:0; }
+.meta { color:var(--muted); font-size:.85rem; margin-top:2px; }
+.acoes { display:flex; gap:8px; align-items:center; }
+.icone { width:38px; height:38px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; font-size:1rem; padding:0; }
+.link { background:none; border:none; color:var(--muted); font:inherit; font-size:.85rem; cursor:pointer; padding:0; text-decoration:underline; text-underline-offset:3px; }
+
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:14px; }
+.card h2 { font-size:.95rem; font-weight:600; margin:0 0 4px; }
+.card .dica { color:var(--muted); font-size:.85rem; margin:0 0 14px; }
+
+.seg { display:grid; grid-template-columns:1fr 1fr; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:4px; margin-bottom:18px; }
+.seg button { background:none; border:none; border-radius:999px; padding:9px; font:inherit; font-size:.9rem; font-weight:500; color:var(--muted); cursor:pointer; }
+.seg button.ativa { background:var(--ink); color:var(--ink-text); }
+
+.mes { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.mes strong { font-size:1.1rem; font-weight:700; letter-spacing:-.01em; }
+.nav { width:40px; height:40px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; font-size:.9rem; padding:0; }
+.nav:disabled { opacity:.3; cursor:default; }
+
+.resumo { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.resumo .card { margin:0; padding:16px; }
+.resumo small { display:block; color:var(--muted); font-size:.78rem; margin-bottom:6px; }
+.resumo strong { font-size:1.2rem; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+.resumo .destaque strong { font-size:1.5rem; }
+
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; font-size:.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; padding:0 6px 10px; }
+td { padding:14px 6px; border-top:1px solid var(--border); font-size:.92rem; vertical-align:middle; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+td.nome { font-weight:500; }
+td.metade { color:var(--muted); }
+.valor-input { width:110px; background:var(--surface-2); border:1px solid transparent; border-radius:8px; padding:7px 8px; text-align:right; font:inherit; font-variant-numeric:tabular-nums; color:var(--text); }
+.valor-input:focus { outline:none; border-color:var(--border); background:var(--surface); }
+.pill { border-radius:999px; padding:6px 12px; font:inherit; font-size:.8rem; font-weight:600; cursor:pointer; border:1px solid var(--ink); white-space:nowrap; }
+.pill.pago { background:var(--ink); color:var(--ink-text); }
+.pill.pendente { background:transparent; color:var(--text); }
+.remover { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; padding:4px 6px; border-radius:6px; }
+.remover:hover { color:var(--text); background:var(--surface-2); }
+.scroll { overflow-x:auto; }
+
+form.nova { display:grid; grid-template-columns:1fr 130px; gap:10px; }
+input.campo { background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; font:inherit; font-size:.95rem; color:var(--text); width:100%; }
+input.campo::placeholder { color:var(--muted); }
+input.campo:focus { outline:none; box-shadow:0 0 0 3px var(--ring); }
+.btn { background:var(--ink); color:var(--ink-text); border:none; border-radius:10px; padding:13px; font:inherit; font-weight:600; font-size:.95rem; cursor:pointer; }
+.btn:hover { opacity:.9; }
+.btn-largo { grid-column:1 / -1; }
+
+.login { min-height:80vh; display:grid; place-items:center; }
+.login .card { width:100%; max-width:380px; }
+.login form { display:grid; gap:10px; margin-top:18px; }
+
+.anual td, .anual th { }
+.anual tr.linha { cursor:pointer; }
+.anual tr.linha:hover td { background:var(--surface-2); }
+
+@media (max-width:480px) {
+  .resumo strong { font-size:1.05rem; }
+  .resumo .destaque strong { font-size:1.3rem; }
+  form.nova { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="telaLogin" class="login hidden">
+  <div class="card">
+    <header style="margin-bottom:0">
+      <div><h1>Despesas Morada Mavi</h1><div class="meta">Entre com seu login</div></div>
+      <button class="icone" id="temaLogin" title="Alternar tema">◐</button>
+    </header>
+    <form id="formLogin">
+      <input class="campo" id="email" type="email" placeholder="E-mail" required autocomplete="username">
+      <input class="campo" id="senha" type="password" placeholder="Senha" required autocomplete="current-password">
+      <button class="btn" type="submit">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="telaApp" class="wrap hidden">
+  <header>
+    <div>
+      <h1>Despesas Morada Mavi</h1>
+      <div class="meta">Contas fixas compartilhadas, divididas 50/50</div>
+    </div>
+    <div class="acoes">
+      <button class="icone" id="tema" title="Alternar tema">◐</button>
+      <a class="link" href="meu-financeiro.html">Meu financeiro</a>
+      <button class="link" id="sair">Sair</button>
+    </div>
+  </header>
+
+  <div class="seg">
+    <button id="tabMes" class="ativa">Mês</button>
+    <button id="tabAno">Ano 2027</button>
+  </div>
+
+  <!-- VISÃO MENSAL -->
+  <div id="viewMes">
+    <div class="mes">
+      <button class="nav" id="prev" aria-label="Mês anterior">◀</button>
+      <strong id="mesTitulo"></strong>
+      <button class="nav" id="next" aria-label="Próximo mês">▶</button>
+    </div>
+
+    <div class="resumo">
+      <div class="card destaque"><small>Total do mês</small><strong id="total">R$ 0,00</strong></div>
+      <div class="card destaque"><small>Cada um paga</small><strong id="metade">R$ 0,00</strong></div>
+      <div class="card"><small>Já pago</small><strong id="pago">R$ 0,00</strong></div>
+      <div class="card"><small>Falta pagar</small><strong id="falta">R$ 0,00</strong></div>
+    </div>
+
+    <div class="card scroll">
+      <table>
+        <thead><tr><th>Conta</th><th class="num">Valor</th><th class="num">Metade</th><th>Status</th><th></th></tr></thead>
+        <tbody id="lista"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Nova conta fixa</h2>
+      <p class="dica">Passa a valer a partir do mês que você está vendo.</p>
+      <form id="form" class="nova">
+        <input class="campo" id="nome" placeholder="Conta (ex.: aluguel)" required>
+        <input class="campo" id="valorNova" type="number" step="0.01" min="0" placeholder="Valor" required>
+        <button class="btn btn-largo" type="submit">Adicionar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- VISÃO ANUAL -->
+  <div id="viewAno" class="hidden">
+    <div class="resumo">
+      <div class="card destaque"><small>Total do ano</small><strong id="anoTotal">R$ 0,00</strong></div>
+      <div class="card destaque"><small>Cada um paga no ano</small><strong id="anoMetade">R$ 0,00</strong></div>
+    </div>
+    <div class="card scroll">
+      <table class="anual">
+        <thead><tr><th>Mês</th><th class="num">Total</th><th class="num">Metade</th><th class="num">Falta</th></tr></thead>
+        <tbody id="listaAno"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const ANO = 2027;
+let contas = [];
+let lancs = {};
+let mesAtual = 0;
+
+// ---- tema claro / escuro ----
+function aplicarTema(t) {
+  document.documentElement.setAttribute('data-theme', t);
+}
+function alternarTema() {
+  const atual = document.documentElement.getAttribute('data-theme');
+  const escuroAgora = atual === 'dark' || (atual === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const novo = escuroAgora ? 'light' : 'dark';
+  localStorage.setItem('tema', novo);
+  aplicarTema(novo);
+}
+aplicarTema(localStorage.getItem('tema') || 'auto');
+document.getElementById('tema').onclick = alternarTema;
+document.getElementById('temaLogin').onclick = alternarTema;
+
+// ---- dados ----
+const fmt = v => Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+const chaveMes = i => `${ANO}-${String(i + 1).padStart(2, '0')}-01`;
+const k = (cid, m) => cid + '|' + m;
+const ativas = m => contas.filter(c => c.inicio <= m && (!c.fim || m <= c.fim));
+const erro = e => alert('Erro: ' + e.message);
+
+function mostrarTela(logado) {
+  document.getElementById('telaLogin').classList.toggle('hidden', logado);
+  document.getElementById('telaApp').classList.toggle('hidden', !logado);
+}
+
+async function carregar() {
+  const { data: c, error: e1 } = await sb.from('contas_fixas').select('*').order('criado_em');
+  if (e1) return erro(e1);
+  contas = c;
+  const { data: l, error: e2 } = await sb.from('lancamentos_mensais').select('*')
+    .gte('mes', `${ANO}-01-01`).lte('mes', `${ANO}-12-01`);
+  if (e2) return erro(e2);
+  lancs = {};
+  l.forEach(x => lancs[k(x.conta_id, x.mes)] = x);
+}
+
+async function garantirMes(m) {
+  const faltam = ativas(m).filter(c => !lancs[k(c.id, m)])
+    .map(c => ({ conta_id: c.id, mes: m, valor: c.valor, pago: false }));
+  if (!faltam.length) return;
+  const { data, error } = await sb.from('lancamentos_mensais').insert(faltam).select();
+  if (error) return erro(error);
+  data.forEach(x => lancs[k(x.conta_id, x.mes)] = x);
+}
+
+function totaisDoMes(m) {
+  const itens = ativas(m).map(c => lancs[k(c.id, m)]).filter(Boolean);
+  const total = itens.reduce((s, x) => s + Number(x.valor), 0);
+  const pago = itens.filter(x => x.pago).reduce((s, x) => s + Number(x.valor), 0);
+  return { total, metade: total / 2, pago, falta: total - pago };
+}
+
+async function renderMes() {
+  const m = chaveMes(mesAtual);
+  await garantirMes(m);
+  document.getElementById('mesTitulo').textContent = `${MESES[mesAtual]} de ${ANO}`;
+  document.getElementById('prev').disabled = mesAtual === 0;
+  document.getElementById('next').disabled = mesAtual === 11;
+
+  const t = totaisDoMes(m);
+  document.getElementById('total').textContent = fmt(t.total);
+  document.getElementById('metade').textContent = fmt(t.metade);
+  document.getElementById('pago').textContent = fmt(t.pago);
+  document.getElementById('falta').textContent = fmt(t.falta);
+
+  const lista = document.getElementById('lista');
+  lista.innerHTML = '';
+  ativas(m).forEach(c => {
+    const x = lancs[k(c.id, m)];
+    if (!x) return;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="nome"></td>
+      <td class="num"><input class="valor-input" type="number" step="0.01" min="0" value="${Number(x.valor)}"></td>
+      <td class="num metade">${fmt(Number(x.valor) / 2)}</td>
+      <td><button class="pill ${x.pago ? 'pago' : 'pendente'}">${x.pago ? 'Pago' : 'Pendente'}</button></td>
+      <td><button class="remover" title="Encerrar a partir do próximo mês">✕</button></td>`;
+    tr.children[0].textContent = c.nome;
+    tr.querySelector('input').onchange = e => atualizarLanc(c.id, m, { valor: parseFloat(e.target.value) || 0 });
+    tr.querySelector('.pill').onclick = () => atualizarLanc(c.id, m, { pago: !x.pago });
+    tr.querySelector('.remover').onclick = async () => {
+      if (!confirm(`Encerrar "${c.nome}" a partir do mês seguinte?`)) return;
+      const { error } = await sb.from('contas_fixas').update({ fim: m }).eq('id', c.id);
+      if (error) return erro(error);
+      c.fim = m;
+      renderMes();
+    };
+    lista.appendChild(tr);
+  });
+}
+
+async function atualizarLanc(cid, m, campos) {
+  const x = lancs[k(cid, m)];
+  const { data, error } = await sb.from('lancamentos_mensais').update(campos).eq('id', x.id).select().single();
+  if (error) return erro(error);
+  lancs[k(cid, m)] = data;
+  renderMes();
+}
+
+async function renderAno() {
+  for (let i = 0; i < 12; i++) await garantirMes(chaveMes(i));
+  let totalAno = 0, metadeAno = 0;
+  const lista = document.getElementById('listaAno');
+  lista.innerHTML = '';
+  for (let i = 0; i < 12; i++) {
+    const t = totaisDoMes(chaveMes(i));
+    totalAno += t.total;
+    metadeAno += t.metade;
+    const tr = document.createElement('tr');
+    tr.className = 'linha';
+    tr.innerHTML = `<td class="nome">${MESES[i]}</td><td class="num">${fmt(t.total)}</td><td class="num metade">${fmt(t.metade)}</td><td class="num">${fmt(t.falta)}</td>`;
+    tr.onclick = () => { mesAtual = i; mostrar('mes'); };
+    lista.appendChild(tr);
+  }
+  document.getElementById('anoTotal').textContent = fmt(totalAno);
+  document.getElementById('anoMetade').textContent = fmt(metadeAno);
+}
+
+function mostrar(v) {
+  const mes = v === 'mes';
+  document.getElementById('viewMes').classList.toggle('hidden', !mes);
+  document.getElementById('viewAno').classList.toggle('hidden', mes);
+  document.getElementById('tabMes').classList.toggle('ativa', mes);
+  document.getElementById('tabAno').classList.toggle('ativa', !mes);
+  if (mes) renderMes(); else renderAno();
+}
+
+async function iniciar() {
+  const { data: { session } } = await sb.auth.getSession();
+  mostrarTela(!!session);
+  if (!session) return;
+  await carregar();
+  mostrar('mes');
+}
+
+document.getElementById('formLogin').onsubmit = async e => {
+  e.preventDefault();
+  const { error } = await sb.auth.signInWithPassword({
+    email: document.getElementById('email').value.trim(),
+    password: document.getElementById('senha').value
+  });
+  if (error) return erro(error);
+  e.target.reset();
+  iniciar();
+};
+
+document.getElementById('sair').onclick = async () => {
+  await sb.auth.signOut();
+  iniciar();
+};
+
+document.getElementById('form').onsubmit = async e => {
+  e.preventDefault();
+  const m = chaveMes(mesAtual);
+  const { data, error } = await sb.from('contas_fixas').insert({
+    nome: document.getElementById('nome').value.trim(),
+    valor: parseFloat(document.getElementById('valorNova').value) || 0,
+    inicio: m
+  }).select().single();
+  if (error) return erro(error);
+  contas.push(data);
+  e.target.reset();
+  await garantirMes(m);
+  renderMes();
+};
+
+document.getElementById('prev').onclick = () => { if (mesAtual > 0) { mesAtual--; renderMes(); } };
+document.getElementById('next').onclick = () => { if (mesAtual < 11) { mesAtual++; renderMes(); } };
+document.getElementById('tabMes').onclick = () => mostrar('mes');
+document.getElementById('tabAno').onclick = () => mostrar('ano');
+
+iniciar();
+</script>
+</body>
+</html>

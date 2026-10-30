@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu financeiro</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="menu.js"></script>
+<style>
+:root { --bg:#f5f5f4; --surface:#fff; --surface-2:#f0f0ef; --border:#e6e6e4; --text:#15161a; --muted:#72747a;
+  --verde:#0f7a55; --vermelho:#b42318; --ink:#15161a; --ink-text:#fff; --ring:rgba(0,0,0,.1); color-scheme:light; }
+:root[data-theme="dark"] { --bg:#0e0f11; --surface:#17181b; --surface-2:#202126; --border:#2a2b30; --text:#f2f2f3; --muted:#8e9097;
+  --verde:#3fbf8c; --vermelho:#f08a80; --ink:#f2f2f3; --ink-text:#111; --ring:rgba(255,255,255,.12); color-scheme:dark; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --bg:#0e0f11; --surface:#17181b; --surface-2:#202126; --border:#2a2b30; --text:#f2f2f3; --muted:#8e9097;
+  --verde:#3fbf8c; --vermelho:#f08a80; --ink:#f2f2f3; --ink-text:#111; --ring:rgba(255,255,255,.12); color-scheme:dark; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 32px); -webkit-font-smoothing:antialiased; }
+.wrap { max-width:720px; margin:0 auto; }
+.hidden { display:none !important; }
+header { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+header h1 { font-size:1.35rem; font-weight:700; margin:0; flex:1; letter-spacing:-.01em; }
+.meta { color:var(--muted); font-size:.85rem; }
+.round { width:40px; height:40px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; display:grid; place-items:center; font-size:1rem; padding:0; text-decoration:none; }
+.round.primario { background:var(--ink); color:var(--ink-text); border-color:var(--ink); font-size:1.4rem; line-height:1; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:14px; }
+.mes { display:flex; align-items:center; justify-content:space-between; margin:0 auto 16px; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:6px; max-width:320px; }
+.mes strong { font-size:.98rem; font-weight:600; }
+.mes button { width:36px; height:36px; border-radius:50%; border:none; background:none; color:var(--text); cursor:pointer; font-size:.95rem; }
+.resumo { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.resumo .card { margin:0; padding:16px; }
+.resumo small { display:block; color:var(--muted); font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; margin-bottom:6px; }
+.resumo strong { font-size:1.25rem; font-weight:700; font-variant-numeric:tabular-nums; }
+.resumo .largo { grid-column:1 / -1; }
+.verde { color:var(--verde); } .vermelho { color:var(--vermelho); }
+.chips { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0; }
+.chip { border:1px solid var(--border); background:none; color:var(--muted); border-radius:999px; padding:7px 14px; font:inherit; font-size:.85rem; cursor:pointer; }
+.chip.ativo { background:var(--ink); color:var(--ink-text); border-color:var(--ink); }
+.dia { display:flex; justify-content:space-between; color:var(--muted); font-size:.75rem; letter-spacing:.06em; text-transform:uppercase; padding:14px 0 6px; border-top:1px solid var(--border); }
+.item { display:flex; align-items:center; gap:12px; padding:12px 0; cursor:pointer; }
+.item:hover .desc { text-decoration:underline; text-underline-offset:3px; }
+.bola { width:10px; height:10px; border-radius:50%; flex:none; background:var(--muted); }
+.bola.entrada { background:var(--verde); } .bola.saida { background:var(--vermelho); } .bola.investimento { background:var(--text); }
+.info { flex:1; min-width:0; }
+.desc { font-weight:600; font-size:.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sub { color:var(--muted); font-size:.8rem; margin-top:2px; }
+.valor { text-align:right; font-variant-numeric:tabular-nums; font-weight:700; font-size:.95rem; white-space:nowrap; }
+.status { display:block; font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-top:3px; }
+.vazio { color:var(--muted); text-align:center; padding:30px 0; font-size:.9rem; }
+dialog { border:none; border-radius:18px; padding:22px; width:min(420px,calc(100% - 32px)); background:var(--surface); color:var(--text); box-shadow:0 20px 60px rgba(0,0,0,.25); }
+dialog::backdrop { background:rgba(0,0,0,.45); }
+dialog h2 { font-size:1.05rem; margin:0 0 14px; }
+.tipos { display:grid; grid-template-columns:repeat(3,1fr); background:var(--surface-2); border-radius:12px; padding:4px; margin-bottom:12px; }
+.tipos button { background:none; border:none; padding:9px 4px; border-radius:9px; font:inherit; font-size:.85rem; color:var(--muted); cursor:pointer; }
+.tipos button.ativo { background:var(--surface); color:var(--text); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+.campo { width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; font:inherit; font-size:.95rem; color:var(--text); margin-bottom:10px; }
+.campo:focus { outline:none; box-shadow:0 0 0 3px var(--ring); }
+.linha2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.acoes { display:flex; gap:8px; justify-content:flex-end; margin-top:6px; flex-wrap:wrap; }
+.btn { border:none; border-radius:10px; padding:11px 18px; font:inherit; font-weight:600; cursor:pointer; background:var(--ink); color:var(--ink-text); }
+.btn.sec { background:none; color:var(--text); border:1px solid var(--border); }
+.btn.perigo { background:none; color:var(--vermelho); border:1px solid var(--border); margin-right:auto; }
+.cat-linha { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); font-size:.92rem; }
+.cat-linha button { background:none; border:none; color:var(--muted); cursor:pointer; font:inherit; font-size:.85rem; padding:4px 6px; }
+.grupo { color:var(--muted); font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; margin:16px 0 4px; }
+</style>
+</head>
+<body>
+
+<div id="telaLogin" class="wrap hidden" style="text-align:center;padding-top:40px">
+  <p class="meta">Você precisa entrar primeiro.</p>
+  <a class="btn" href="index.html" style="text-decoration:none;display:inline-block">Ir para o login</a>
+</div>
+
+<div id="telaApp" class="wrap hidden">
+  <header>
+    <a class="round" href="index.html" title="Voltar">‹</a>
+    <div style="flex:1">
+      <h1>Meu financeiro</h1>
+      <div class="meta" id="contagem"></div>
+    </div>
+    <a class="round" href="dashboard.html" title="Dashboard">▦</a>
+    <button class="round" id="btnCats" title="Categorias">⚙</button>
+    <button class="round primario" id="btnNovo" title="Novo lançamento">+</button>
+  </header>
+
+  <div class="mes">
+    <button id="prev" aria-label="Mês anterior">‹</button>
+    <strong id="mesTitulo"></strong>
+    <button id="next" aria-label="Próximo mês">›</button>
+  </div>
+
+  <div class="resumo">
+    <div class="card largo"><small>Saldo do período</small><strong id="saldo">R$ 0,00</strong></div>
+    <div class="card"><small>Entradas</small><strong class="verde" id="entradas">R$ 0,00</strong></div>
+    <div class="card"><small>Saídas</small><strong class="vermelho" id="saidas">R$ 0,00</strong></div>
+    <div class="card largo"><small>Investido</small><strong id="investido">R$ 0,00</strong></div>
+  </div>
+
+  <div class="chips" id="filtros">
+    <button class="chip ativo" data-f="todos">Todos</button>
+    <button class="chip" data-f="concluido">Concluídos</button>
+    <button class="chip" data-f="pendente">Pendentes</button>
+  </div>
+
+  <div class="card" style="padding:6px 18px" id="lista"></div>
+</div>
+
+<!-- Novo / editar lançamento -->
+<dialog id="dlgLanc">
+  <h2 id="tituloLanc">Novo lançamento</h2>
+  <form id="formLanc">
+    <div class="tipos" id="tipos">
+      <button type="button" data-t="entrada">Entrada</button>
+      <button type="button" data-t="saida" class="ativo">Saída</button>
+      <button type="button" data-t="investimento">Investimento</button>
+    </div>
+    <input class="campo" id="desc" placeholder="Descrição (ex.: Salário, Mercado)" required>
+    <div class="linha2">
+      <input class="campo" id="valor" type="number" step="0.01" min="0" placeholder="Valor" required>
+      <input class="campo" id="data" type="date" required>
+    </div>
+    <select class="campo" id="categoria" required></select>
+    <select class="campo" id="status">
+      <option value="true">Concluído</option>
+      <option value="false">Pendente</option>
+    </select>
+    <div class="acoes">
+      <button class="btn perigo hidden" type="button" id="apagarLanc">Excluir</button>
+      <button class="btn sec" type="button" id="cancelLanc">Cancelar</button>
+      <button class="btn" type="submit">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Categorias -->
+<dialog id="dlgCats">
+  <h2>Categorias</h2>
+  <div id="listaCats"></div>
+  <button class="btn sec" type="button" id="addPrincipais" style="width:100%;margin-top:12px">Adicionar categorias principais que faltam</button>
+  <form id="formCat" class="linha2" style="margin-top:14px">
+    <input class="campo" id="catNome" placeholder="Nova categoria" required style="margin:0">
+    <select class="campo" id="catTipo" style="margin:0">
+      <option value="entrada">Entrada</option>
+      <option value="saida" selected>Saída</option>
+      <option value="investimento">Investimento</option>
+    </select>
+    <div class="acoes" style="grid-column:1/-1"><button class="btn" type="submit">Adicionar</button><button class="btn sec" type="button" id="fecharCats">Fechar</button></div>
+  </form>
+</dialog>
+
+<script>
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const TIPOS = { entrada:'Entrada', saida:'Saída', investimento:'Investimento' };
+const ROTULO_STATUS = {
+  entrada:      { true:'Recebido',  false:'A receber' },
+  saida:        { true:'Pago',      false:'A pagar' },
+  investimento: { true:'Aplicado',  false:'Pendente' }
+};
+const PADRAO = [
+  ['Salário','entrada'], ['13º salário','entrada'], ['Férias','entrada'], ['Freelances','entrada'], ['Rendimentos','entrada'], ['Outras entradas','entrada'],
+  ['Moradia','saida'], ['Contas da casa','saida'], ['Mercado','saida'], ['Restaurantes e delivery','saida'],
+  ['Transporte','saida'], ['Combustível','saida'], ['Saúde','saida'], ['Farmácia','saida'], ['Educação','saida'],
+  ['Lazer','saida'], ['Assinaturas','saida'], ['Vestuário','saida'], ['Cuidados pessoais','saida'], ['Presentes','saida'],
+  ['Impostos','saida'], ['Outros','saida'],
+  ['Reserva de emergência','investimento'], ['Renda fixa','investimento'], ['Renda variável','investimento'],
+  ['Previdência privada','investimento'], ['Fundos imobiliários','investimento'], ['Outros investimentos','investimento']
+];
+
+let user = null, cats = [], trans = [];
+const INICIO = { ano: 2027, mes: 0 };        // começa a valer em janeiro de 2027
+let ano = INICIO.ano, mes = INICIO.mes, filtro = 'todos';
+
+const fmt = v => Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+const erro = e => alert('Erro: ' + e.message);
+const pad = n => String(n).padStart(2, '0');
+const primeiroDia = () => `${ano}-${pad(mes + 1)}-01`;
+const ultimoDia = () => `${ano}-${pad(mes + 1)}-${pad(new Date(ano, mes + 1, 0).getDate())}`;
+
+// ---- tema ----
+const tema = localStorage.getItem('tema');
+if (tema) document.documentElement.setAttribute('data-theme', tema);
+
+// ---- carregar ----
+async function carregar() {
+  const { data: c, error: e1 } = await sb.from('categorias').select('*').order('criado_em');
+  if (e1) return erro(e1);
+  if (!c.length) {
+    const linhas = PADRAO.map(([nome, tipo]) => ({ nome, tipo, user_id: user.id }));
+    const { data, error } = await sb.from('categorias').insert(linhas).select();
+    if (error) return erro(error);
+    cats = data;
+  } else cats = c;
+
+  const { data: t, error: e2 } = await sb.from('transacoes').select('*')
+    .gte('data', primeiroDia()).lte('data', ultimoDia()).order('data', { ascending:false });
+  if (e2) return erro(e2);
+  trans = t;
+}
+
+async function iniciar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { document.getElementById('telaLogin').classList.remove('hidden'); return; }
+  user = session.user;
+  document.getElementById('telaApp').classList.remove('hidden');
+  await carregar();
+  render();
+}
+
+// ---- render ----
+function render() {
+  document.getElementById('mesTitulo').textContent = `${MESES[mes]} de ${ano}`;
+  const soma = t => trans.filter(x => x.tipo === t).reduce((s, x) => s + Number(x.valor), 0);
+  const ent = soma('entrada'), sai = soma('saida'), inv = soma('investimento');
+  document.getElementById('entradas').textContent = fmt(ent);
+  document.getElementById('saidas').textContent = fmt(sai);
+  document.getElementById('investido').textContent = fmt(inv);
+  const saldo = ent - sai - inv;
+  const el = document.getElementById('saldo');
+  el.textContent = fmt(saldo);
+  el.className = saldo < 0 ? 'vermelho' : '';
+  document.getElementById('contagem').textContent = `${trans.length} lançamento(s) no mês`;
+
+  document.querySelectorAll('#filtros .chip').forEach(b => b.classList.toggle('ativo', b.dataset.f === filtro));
+
+  const lista = document.getElementById('lista');
+  lista.innerHTML = '';
+  const visiveis = trans.filter(x => filtro === 'todos' || (filtro === 'concluido') === x.concluido);
+  if (!visiveis.length) { lista.innerHTML = '<div class="vazio">Nenhum lançamento aqui ainda.</div>'; return; }
+
+  let diaAtual = null;
+  visiveis.forEach(x => {
+    if (x.data !== diaAtual) {
+      diaAtual = x.data;
+      const [a, m, d] = x.data.split('-');
+      const cab = document.createElement('div');
+      cab.className = 'dia';
+      cab.innerHTML = `<span>${d}/${m}</span>`;
+      lista.appendChild(cab);
+    }
+    const cat = cats.find(c => c.id === x.categoria_id);
+    const sinal = x.tipo === 'entrada' ? '+' : '−';
+    const cor = x.tipo === 'entrada' ? 'verde' : (x.tipo === 'saida' ? 'vermelho' : '');
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <span class="bola ${x.tipo}"></span>
+      <div class="info">
+        <div class="desc"></div>
+        <div class="sub"></div>
+      </div>
+      <div>
+        <div class="valor ${cor}">${sinal} ${fmt(x.valor)}</div>
+        <span class="status">${ROTULO_STATUS[x.tipo][x.concluido]}</span>
+      </div>`;
+    div.querySelector('.desc').textContent = x.descricao;
+    div.querySelector('.sub').textContent = `${TIPOS[x.tipo]} · ${cat ? cat.nome : 'Sem categoria'}`;
+    div.onclick = () => abrirLanc(x);
+    lista.appendChild(div);
+  });
+}
+
+// ---- lançamento ----
+let tipoAtual = 'saida', editando = null;
+
+function marcarTipo(t) {
+  tipoAtual = t;
+  document.querySelectorAll('#tipos button').forEach(b => b.classList.toggle('ativo', b.dataset.t === t));
+  const sel = document.getElementById('categoria');
+  const doTipo = cats.filter(c => c.tipo === t);
+  sel.innerHTML = doTipo.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+  if (!doTipo.length) sel.innerHTML = '<option value="">Crie uma categoria antes</option>';
+  const st = document.getElementById('status');
+  st.options[0].text = ROTULO_STATUS[t][true];
+  st.options[1].text = ROTULO_STATUS[t][false];
+}
+
+function abrirLanc(x = null) {
+  editando = x;
+  document.getElementById('tituloLanc').textContent = x ? 'Editar lançamento' : 'Novo lançamento';
+  document.getElementById('apagarLanc').classList.toggle('hidden', !x);
+  document.getElementById('formLanc').reset();
+  document.getElementById('data').value = x ? x.data : (mes === new Date().getMonth() && ano === new Date().getFullYear() ? new Date().toISOString().slice(0,10) : primeiroDia());
+  if (x) {
+    document.getElementById('desc').value = x.descricao;
+    document.getElementById('valor').value = Number(x.valor);
+    document.getElementById('status').value = String(x.concluido);
+    marcarTipo(x.tipo);
+    document.getElementById('categoria').value = x.categoria_id || '';
+  } else {
+    marcarTipo('saida');
+    document.getElementById('status').value = 'true';
+  }
+  document.getElementById('dlgLanc').showModal();
+}
+
+document.querySelectorAll('#tipos button').forEach(b => b.onclick = () => marcarTipo(b.dataset.t));
+document.getElementById('cancelLanc').onclick = () => document.getElementById('dlgLanc').close();
+
+document.getElementById('formLanc').onsubmit = async e => {
+  e.preventDefault();
+  const catId = document.getElementById('categoria').value;
+  if (!catId) return alert('Crie uma categoria deste tipo antes de lançar.');
+  const campos = {
+    descricao: document.getElementById('desc').value.trim(),
+    valor: parseFloat(document.getElementById('valor').value) || 0,
+    tipo: tipoAtual,
+    categoria_id: catId,
+    data: document.getElementById('data').value,
+    concluido: document.getElementById('status').value === 'true'
+  };
+  const res = editando
+    ? await sb.from('transacoes').update(campos).eq('id', editando.id)
+    : await sb.from('transacoes').insert({ ...campos, user_id: user.id });
+  if (res.error) return erro(res.error);
+  document.getElementById('dlgLanc').close();
+  await recarregarMes();
+};
+
+document.getElementById('apagarLanc').onclick = async () => {
+  if (!editando || !confirm('Excluir este lançamento?')) return;
+  const { error } = await sb.from('transacoes').delete().eq('id', editando.id);
+  if (error) return erro(error);
+  document.getElementById('dlgLanc').close();
+  await recarregarMes();
+};
+
+async function recarregarMes() {
+  const { data, error } = await sb.from('transacoes').select('*')
+    .gte('data', primeiroDia()).lte('data', ultimoDia()).order('data', { ascending:false });
+  if (error) return erro(error);
+  trans = data;
+  render();
+}
+
+// ---- categorias ----
+function renderCats() {
+  const el = document.getElementById('listaCats');
+  el.innerHTML = '';
+  ['entrada','saida','investimento'].forEach(t => {
+    const grupo = document.createElement('div');
+    grupo.innerHTML = `<div class="grupo">${TIPOS[t]}s</div>`;
+    cats.filter(c => c.tipo === t).forEach(c => {
+      const linha = document.createElement('div');
+      linha.className = 'cat-linha';
+      linha.innerHTML = `<span></span><span><button class="ren">Renomear</button><button class="del">Excluir</button></span>`;
+      linha.querySelector('span').textContent = c.nome;
+      linha.querySelector('.ren').onclick = async () => {
+        const nome = prompt('Novo nome:', c.nome);
+        if (!nome || !nome.trim()) return;
+        const { error } = await sb.from('categorias').update({ nome: nome.trim() }).eq('id', c.id);
+        if (error) return erro(error);
+        c.nome = nome.trim(); renderCats(); render();
+      };
+      linha.querySelector('.del').onclick = async () => {
+        if (!confirm(`Excluir "${c.nome}"? Os lançamentos dela ficam sem categoria.`)) return;
+        const { error } = await sb.from('categorias').delete().eq('id', c.id);
+        if (error) return erro(error);
+        cats = cats.filter(x => x.id !== c.id);
+        trans.forEach(x => { if (x.categoria_id === c.id) x.categoria_id = null; });
+        renderCats(); render();
+      };
+      grupo.appendChild(linha);
+    });
+    el.appendChild(grupo);
+  });
+}
+
+document.getElementById('btnCats').onclick = () => { renderCats(); document.getElementById('dlgCats').showModal(); };
+document.getElementById('fecharCats').onclick = () => document.getElementById('dlgCats').close();
+
+document.getElementById('addPrincipais').onclick = async () => {
+  const existentes = new Set(cats.map(c => c.tipo + '|' + c.nome.toLowerCase()));
+  const novas = PADRAO
+    .filter(([nome, tipo]) => !existentes.has(tipo + '|' + nome.toLowerCase()))
+    .map(([nome, tipo]) => ({ nome, tipo, user_id: user.id }));
+  if (!novas.length) return alert('Você já tem todas as categorias principais.');
+  const { data, error } = await sb.from('categorias').insert(novas).select();
+  if (error) return erro(error);
+  cats.push(...data);
+  renderCats();
+  marcarTipo(tipoAtual);
+};
+document.getElementById('formCat').onsubmit = async e => {
+  e.preventDefault();
+  const { data, error } = await sb.from('categorias').insert({
+    nome: document.getElementById('catNome').value.trim(),
+    tipo: document.getElementById('catTipo').value,
+    user_id: user.id
+  }).select().single();
+  if (error) return erro(error);
+  cats.push(data);
+  e.target.reset();
+  renderCats();
+};
+
+// ---- navegação e filtros ----
+document.getElementById('prev').onclick = async () => {
+  if (ano === INICIO.ano && mes === INICIO.mes) return;
+  mes--; if (mes < 0) { mes = 11; ano--; }
+  await recarregarMes();
+};
+document.getElementById('next').onclick = async () => { mes++; if (mes > 11) { mes = 0; ano++; } await recarregarMes(); };
+document.getElementById('btnNovo').onclick = () => abrirLanc();
+document.querySelectorAll('#filtros .chip').forEach(b => b.onclick = () => { filtro = b.dataset.f; render(); });
+
+iniciar();
+</script>
+</body>
+</html>
