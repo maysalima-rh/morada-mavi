@@ -80,13 +80,13 @@
     fundo.onclick = () => alternar(false);
 
     // botão Sair aparece só quando há sessão ativa
-    if (window.sb) {
-      window.sb.auth.getSession().then(({ data: { session } }) => {
+    if (typeof sb !== 'undefined') {
+      sb.auth.getSession().then(({ data: { session } }) => {
         if (!session) return;
         const rod = document.getElementById('sbRodape');
         rod.innerHTML = '<button type="button">Sair</button>';
         rod.querySelector('button').onclick = async () => {
-          await window.sb.auth.signOut();
+          await sb.auth.signOut();
           location.href = 'index.html';
         };
       });
