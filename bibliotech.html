@@ -363,7 +363,7 @@ function ehEscuroBib() {
 function renderInd() {
   if (typeof Chart === 'undefined') return;
   const sel = document.getElementById('anoInd');
-  const anoAtual = String(new Date().getFullYear());
+  const anoAtual = '2027';
   const anos = new Set([anoAtual]);
   livros.forEach(l => { const a = (l.concluido_em || l.criado_em || '').slice(0, 4); if (a) anos.add(a); });
   const escolhido = sel.value && anos.has(sel.value) ? sel.value : anoAtual;
