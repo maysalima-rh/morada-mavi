@@ -4,7 +4,8 @@
   const ITENS = [
     { grupo: 'Financeiro', nome: 'Morada Mavi',     href: 'index.html',          icone: '⌂' },
     { grupo: 'Financeiro', nome: 'Meu financeiro',  href: 'meu-financeiro.html', icone: '▤' },
-    { grupo: 'Financeiro', nome: 'Dashboard',       href: 'dashboard.html',      icone: '▦' }
+    { grupo: 'Financeiro', nome: 'Dashboard',       href: 'dashboard.html',      icone: '▦' },
+    { grupo: 'Minha rotina', nome: 'Bibliotech',    href: 'bibliotech.html',     icone: '≡' }
   ];
 
   const css = `
