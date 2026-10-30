@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bibliotech</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script src="config.js"></script>
 <script src="menu.js"></script>
 <style>
@@ -65,6 +66,18 @@ dialog h2 { font-size:1.05rem; margin:0 0 16px; }
 .btn.perigo { background:none; color:#b42318; border:1px solid var(--border); margin-right:auto; }
 .link-pdf { color:var(--text); font-size:.82rem; text-decoration:underline; text-underline-offset:3px; }
 @media (max-width:560px) { .stats { grid-template-columns:1fr 1fr 1fr; } .stats strong { font-size:1.05rem; } .linha2 { grid-template-columns:1fr; } }
+
+.seg { display:grid; grid-template-columns:1fr 1fr; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:4px; margin-bottom:16px; }
+.seg button { background:none; border:none; border-radius:999px; padding:9px; font:inherit; font-size:.9rem; font-weight:500; color:var(--muted); cursor:pointer; }
+.seg button.ativa { background:var(--ink); color:var(--ink-text); }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:14px; }
+.kpi { margin:0; padding:14px; }
+.kpi small { display:block; color:var(--muted); font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; margin-bottom:6px; }
+.kpi strong { font-size:1.2rem; font-weight:700; font-variant-numeric:tabular-nums; }
+.card h2 { font-size:.95rem; font-weight:600; margin:0 0 2px; }
+.card .dica { color:var(--muted); font-size:.8rem; margin:0 0 12px; }
+.caixa { position:relative; height:260px; }
+.ano-sel { max-width:180px; margin-bottom:14px; }
 </style>
 </head>
 <body>
@@ -83,6 +96,12 @@ dialog h2 { font-size:1.05rem; margin:0 0 16px; }
     <button class="round" id="btnNovo" title="Cadastrar livro">+</button>
   </header>
 
+  <div class="seg">
+    <button id="tabLista" class="ativa">Livros</button>
+    <button id="tabInd">Indicadores</button>
+  </div>
+
+  <div id="viewLista">
   <div class="stats">
     <div class="card"><small>Lidos</small><strong id="sLidos">0</strong></div>
     <div class="card"><small>Lendo</small><strong id="sLendo">0</strong></div>
@@ -97,6 +116,14 @@ dialog h2 { font-size:1.05rem; margin:0 0 16px; }
   </div>
 
   <div class="card" style="padding:6px 18px" id="lista"></div>
+  </div>
+
+  <div id="viewInd" class="hidden">
+    <div class="ano-sel"><label class="rotulo" for="anoInd">Ano</label><select class="campo" id="anoInd" style="margin:0"></select></div>
+    <div class="kpis" id="kpiInd"></div>
+    <div class="card"><h2>Livros lidos por mês</h2><p class="dica">Pelo mês de conclusão</p><div class="caixa"><canvas id="gLidosMes"></canvas></div></div>
+    <div class="card" style="margin-top:14px"><h2>Livros por categoria</h2><p class="dica">Quantidade cadastrada em cada categoria</p><div class="caixa"><canvas id="gCat"></canvas></div></div>
+  </div>
 </div>
 
 <dialog id="dlg">
@@ -314,6 +341,94 @@ document.getElementById('apagar').onclick = async () => {
 document.getElementById('cancelar').onclick = () => document.getElementById('dlg').close();
 document.getElementById('btnNovo').onclick = () => abrir();
 document.querySelectorAll('#filtros .chip').forEach(b => b.onclick = () => { filtro = b.dataset.f; render(); });
+
+
+// ---- indicadores ----
+let graficosInd = [];
+
+function mostrarAba(aba) {
+  const lista = aba === 'lista';
+  document.getElementById('viewLista').classList.toggle('hidden', !lista);
+  document.getElementById('viewInd').classList.toggle('hidden', lista);
+  document.getElementById('tabLista').classList.toggle('ativa', lista);
+  document.getElementById('tabInd').classList.toggle('ativa', !lista);
+  if (!lista) renderInd();
+}
+
+function ehEscuroBib() {
+  const t = document.documentElement.getAttribute('data-theme');
+  return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+}
+
+function renderInd() {
+  if (typeof Chart === 'undefined') return;
+  const sel = document.getElementById('anoInd');
+  const anoAtual = String(new Date().getFullYear());
+  const anos = new Set([anoAtual]);
+  livros.forEach(l => { const a = (l.concluido_em || l.criado_em || '').slice(0, 4); if (a) anos.add(a); });
+  const escolhido = sel.value && anos.has(sel.value) ? sel.value : anoAtual;
+  sel.innerHTML = [...anos].sort().reverse().map(a => `<option value="${a}">${a}</option>`).join('');
+  sel.value = escolhido;
+  const Y = escolhido;
+
+  const ehLido = l => l.status === 'lido';
+  const lidosAno = livros.filter(l => ehLido(l) && (l.concluido_em || '').startsWith(Y));
+  const lendo = livros.filter(l => l.status === 'lendo');
+  const paginasAno = lidosAno.reduce((s, l) => s + (l.paginas_total || 0), 0);
+  const comPaginas = lidosAno.filter(l => l.paginas_total);
+  const mediaPag = comPaginas.length ? Math.round(paginasAno / comPaginas.length) : null;
+  const notas = lidosAno.filter(l => l.avaliacao).map(l => l.avaliacao);
+  const notaMedia = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1).replace('.', ',') : null;
+  const taxa = livros.length ? Math.round((livros.filter(ehLido).length / livros.length) * 100) : 0;
+
+  document.getElementById('kpiInd').innerHTML = [
+    ['Cadastrados', livros.length],
+    [`Lidos em ${Y}`, lidosAno.length],
+    ['Lendo agora', lendo.length],
+    [`Páginas em ${Y}`, paginasAno.toLocaleString('pt-BR')],
+    ['Média de páginas', mediaPag ?? '—'],
+    ['Nota média', notaMedia ? notaMedia + ' ★' : '—'],
+    ['Taxa de conclusão', taxa + '%']
+  ].map(([r, v]) => `<div class="card kpi"><small>${r}</small><strong>${v}</strong></div>`).join('');
+
+  // dados dos gráficos
+  const porMes = Array(12).fill(0);
+  lidosAno.forEach(l => porMes[Number(l.concluido_em.slice(5, 7)) - 1]++);
+
+  const porCat = {};
+  livros.forEach(l => { const k = l.categoria || 'Sem categoria'; porCat[k] = (porCat[k] || 0) + 1; });
+  const topCat = Object.entries(porCat).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  // cores conforme o tema
+  const escuro = ehEscuroBib();
+  const texto = escuro ? '#8e9097' : '#72747a';
+  const grade = escuro ? '#2a2b30' : '#e6e6e4';
+  const preto = escuro ? '#f2f2f3' : '#15161a';
+  Chart.defaults.color = texto;
+  Chart.defaults.font.family = '-apple-system, Segoe UI, Inter, Roboto, sans-serif';
+
+  graficosInd.forEach(g => g.destroy());
+  graficosInd = [];
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  graficosInd.push(new Chart(document.getElementById('gLidosMes'), {
+    type: 'bar',
+    data: { labels: meses, datasets: [{ label: 'Lidos', data: porMes, backgroundColor: preto, borderRadius: 6 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: grade } } } }
+  }));
+
+  graficosInd.push(new Chart(document.getElementById('gCat'), {
+    type: 'bar',
+    data: { labels: topCat.map(c => c[0]), datasets: [{ label: 'Livros', data: topCat.map(c => c[1]), backgroundColor: preto, borderRadius: 6 }] },
+    options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: grade } }, y: { grid: { display: false } } } }
+  }));
+}
+
+document.getElementById('tabLista').onclick = () => mostrarAba('lista');
+document.getElementById('tabInd').onclick = () => mostrarAba('ind');
+document.getElementById('anoInd').onchange = renderInd;
 
 async function iniciar() {
   const { data: { session } } = await sb.auth.getSession();
