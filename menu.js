@@ -44,7 +44,7 @@
     document.body.classList.add('com-menu');
 
     const atual = location.pathname.split('/').pop() || 'index.html';
-    let html = '<div class="marca">Meu painel</div>';
+    let html = '<div class="marca">MAVI</div>';
     let grupoAtual = undefined;
     ITENS.forEach(it => {
       if (it.grupo !== grupoAtual) {
