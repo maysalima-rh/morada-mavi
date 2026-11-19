@@ -125,8 +125,6 @@ input.campo:focus { outline:none; box-shadow:0 0 0 3px var(--ring); }
     </div>
     <div class="acoes">
       <button class="icone" id="tema" title="Alternar tema">◐</button>
-      <a class="link" href="meu-financeiro.html">Meu financeiro</a>
-      <button class="link" id="sair">Sair</button>
     </div>
   </header>
 
@@ -336,11 +334,6 @@ document.getElementById('formLogin').onsubmit = async e => {
   });
   if (error) return erro(error);
   e.target.reset();
-  iniciar();
-};
-
-document.getElementById('sair').onclick = async () => {
-  await sb.auth.signOut();
   iniciar();
 };
 
