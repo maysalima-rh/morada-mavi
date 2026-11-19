@@ -19,7 +19,7 @@
   .sb a { display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; color:var(--text,#15161a);
     text-decoration:none; font-size:.92rem; font-weight:500; }
   .sb a:hover { background:var(--surface-2,#f0f0ef); }
-  .sb a.ativo { background:#4a4d55; color:#f2f2f3; }
+  .sb a.ativo { background:#5a5d65; color:#fff; }
   .sb a .i { width:20px; text-align:center; }
   .sb .rodape { margin-top:auto; padding-top:16px; }
   .sb .rodape button { width:100%; background:none; border:1px solid var(--border,#e6e6e4); color:var(--muted,#72747a);

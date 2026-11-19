@@ -10,11 +10,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
 :root { --bg:#f5f5f4; --surface:#fff; --surface-2:#f0f0ef; --border:#e6e6e4; --text:#15161a; --muted:#72747a;
-  --verde:#0f7a55; --vermelho:#b42318; --ink:#15161a; --ink-text:#fff; color-scheme:light; }
+  --verde:#0f7a55; --vermelho:#b42318; --ink:#5a5d65; --ink-text:#fff; color-scheme:light; }
 :root[data-theme="dark"] { --bg:#0e0f11; --surface:#17181b; --surface-2:#202126; --border:#2a2b30; --text:#f2f2f3; --muted:#8e9097;
-  --verde:#3fbf8c; --vermelho:#f08a80; --ink:#f2f2f3; --ink-text:#111; color-scheme:dark; }
+  --verde:#3fbf8c; --vermelho:#f08a80; --ink:#a9abb2; --ink-text:#111; color-scheme:dark; }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] { --bg:#0e0f11; --surface:#17181b; --surface-2:#202126; --border:#2a2b30; --text:#f2f2f3; --muted:#8e9097;
-  --verde:#3fbf8c; --vermelho:#f08a80; --ink:#f2f2f3; --ink-text:#111; color-scheme:dark; } }
+  --verde:#3fbf8c; --vermelho:#f08a80; --ink:#a9abb2; --ink-text:#111; color-scheme:dark; } }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
   padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 32px); -webkit-font-smoothing:antialiased; }
@@ -161,7 +161,7 @@ function desenhar(d) {
   const escuro = ehEscuro();
   const texto = escuro ? '#8e9097' : '#72747a';
   const grade = escuro ? '#2a2b30' : '#e6e6e4';
-  const preto = escuro ? '#f2f2f3' : '#15161a';
+  const preto = escuro ? '#a9abb2' : '#5a5d65';
   const cinza = escuro ? '#5a5c63' : '#b9bbc1';
   Chart.defaults.color = texto;
   Chart.defaults.font.family = '-apple-system, Segoe UI, Inter, Roboto, sans-serif';
