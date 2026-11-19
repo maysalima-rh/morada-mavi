@@ -5,13 +5,13 @@
     { grupo: 'Financeiro', nome: 'Morada Mavi',     href: 'index.html',          icone: '⌂' },
     { grupo: 'Financeiro', nome: 'Meu financeiro',  href: 'meu-financeiro.html', icone: '▤' },
     { grupo: 'Financeiro', nome: 'Dashboard',       href: 'dashboard.html',      icone: '▦' },
-    { grupo: 'Minha rotina', nome: 'Bibliotech',    href: 'bibliotech.html',     icone: '≡' }
+    { grupo: 'Autoconhecimento', nome: 'Bibliotech',    href: 'bibliotech.html',     icone: '≡' }
   ];
 
   const css = `
   :root { --sb-w: 232px; }
   .sb { position:fixed; top:0; left:0; bottom:0; width:var(--sb-w); padding:24px 14px;
-    background:var(--surface,#fff); border-right:1px solid var(--border,#e6e6e4); color:var(--text,#15161a);
+    background:var(--surface,#fff); border-right:1px solid var(--border,#e6e6e4); color:#3a3d44;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
     display:flex; flex-direction:column; gap:2px; z-index:40; overflow-y:auto; }
   .sb .marca { font-weight:700; font-size:1rem; padding:4px 10px 18px; letter-spacing:-.01em; }
@@ -19,7 +19,7 @@
   .sb a { display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; color:var(--text,#15161a);
     text-decoration:none; font-size:.92rem; font-weight:500; }
   .sb a:hover { background:var(--surface-2,#f0f0ef); }
-  .sb a.ativo { background:var(--ink,#15161a); color:var(--ink-text,#fff); }
+  .sb a.ativo { background:#4a4d55; color:#f2f2f3; }
   .sb a .i { width:20px; text-align:center; }
   .sb .rodape { margin-top:auto; padding-top:16px; }
   .sb .rodape button { width:100%; background:none; border:1px solid var(--border,#e6e6e4); color:var(--muted,#72747a);
