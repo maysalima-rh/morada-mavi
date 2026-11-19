@@ -93,6 +93,7 @@ dialog h2 { font-size:1.05rem; margin:0 0 16px; }
       <h1>Bibliotech</h1>
       <div class="meta">Minha biblioteca</div>
     </div>
+    <button class="round" id="tema" title="Alternar tema">◐</button>
     <button class="round" id="btnNovo" title="Cadastrar livro">+</button>
   </header>
 
@@ -425,6 +426,24 @@ function renderInd() {
       scales: { x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: grade } }, y: { grid: { display: false } } } }
   }));
 }
+
+// ---- tema claro / escuro ----
+function aplicarTema(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  // redesenha os gráficos com as cores do novo tema, se a aba estiver aberta
+  if (!document.getElementById('viewInd').classList.contains('hidden')) renderInd();
+}
+function alternarTema() {
+  const novo = ehEscuroBib() ? 'light' : 'dark';
+  localStorage.setItem('tema', novo);
+  aplicarTema(novo);
+}
+aplicarTema(localStorage.getItem('tema') || 'auto');
+document.getElementById('tema').onclick = alternarTema;
+// sem escolha salva, acompanha a troca de tema do sistema
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (!localStorage.getItem('tema')) aplicarTema('auto');
+});
 
 document.getElementById('tabLista').onclick = () => mostrarAba('lista');
 document.getElementById('tabInd').onclick = () => mostrarAba('ind');
